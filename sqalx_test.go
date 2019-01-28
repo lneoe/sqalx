@@ -1,11 +1,10 @@
-package sqalx_test
+package sqalx
 
 import (
 	"os"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/heetch/sqalx"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -29,7 +28,7 @@ func TestSqalxConnectPostgreSQL(t *testing.T) {
 	}
 
 	testSqalxConnect(t, "postgres", dataSource)
-	testSqalxConnect(t, "postgres", dataSource, sqalx.SavePoint(true))
+	testSqalxConnect(t, "postgres", dataSource, SavePoint(true))
 }
 
 func TestSqalxConnectMySQL(t *testing.T) {
@@ -41,13 +40,13 @@ func TestSqalxConnectMySQL(t *testing.T) {
 
 	testSqalxConnect(t, "mysql", dataSource)
 
-	node, err := sqalx.Connect("mysql", dataSource, sqalx.SavePoint(true))
-	require.Equal(t, sqalx.ErrIncompatibleOption, err)
+	node, err := Connect("mysql", dataSource, SavePoint(true))
+	require.Equal(t, ErrIncompatibleOption, err)
 	require.Nil(t, node)
 }
 
-func testSqalxConnect(t *testing.T, driverName, dataSource string, options ...sqalx.Option) {
-	node, err := sqalx.Connect(driverName, dataSource, options...)
+func testSqalxConnect(t *testing.T, driverName, dataSource string, options ...Option) {
+	node, err := Connect(driverName, dataSource, options...)
 	require.NoError(t, err)
 
 	err = node.Close()
@@ -55,7 +54,7 @@ func testSqalxConnect(t *testing.T, driverName, dataSource string, options ...sq
 }
 
 func TestSqalxTransactionViolations(t *testing.T) {
-	node, err := sqalx.New(nil)
+	node, err := New(nil)
 	require.NoError(t, err)
 
 	require.Panics(t, func() {
@@ -71,7 +70,7 @@ func TestSqalxTransactionViolations(t *testing.T) {
 	require.NoError(t, err)
 
 	err = node.Commit()
-	require.Equal(t, err, sqalx.ErrNotInTransaction)
+	require.Equal(t, err, ErrNotInTransaction)
 }
 
 func TestSqalxSimpleQuery(t *testing.T) {
@@ -80,7 +79,7 @@ func TestSqalxSimpleQuery(t *testing.T) {
 
 	mock.ExpectExec("UPDATE products").WillReturnResult(sqlmock.NewResult(1, 1))
 
-	node, err := sqalx.New(db)
+	node, err := New(db)
 	require.NoError(t, err)
 
 	_, err = node.Exec("UPDATE products SET views = views + 1")
@@ -96,7 +95,7 @@ func TestSqalxTopLevelTransaction(t *testing.T) {
 	mock.ExpectExec("UPDATE products").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	node, err := sqalx.New(db)
+	node, err := New(db)
 	require.NoError(t, err)
 
 	node, err = node.Beginx()
@@ -155,7 +154,7 @@ func testSqalxNestedTransactions(t *testing.T, testSavePoint bool) {
 	}
 	mock.ExpectCommit()
 
-	node, err := sqalx.New(db, sqalx.SavePoint(testSavePoint))
+	node, err := New(db, SavePoint(testSavePoint))
 	require.NoError(t, err)
 
 	_, err = node.Exec(query)
@@ -179,7 +178,7 @@ func testSqalxNestedTransactions(t *testing.T, testSavePoint bool) {
 	require.NoError(t, err)
 
 	err = n1_1.Commit()
-	require.Equal(t, sqalx.ErrNotInTransaction, err)
+	require.Equal(t, ErrNotInTransaction, err)
 
 	n1_1, err = n1.Beginx()
 	require.NoError(t, err)
@@ -192,7 +191,7 @@ func testSqalxNestedTransactions(t *testing.T, testSavePoint bool) {
 	require.NoError(t, err)
 
 	err = n1_1.Commit()
-	require.Equal(t, sqalx.ErrNotInTransaction, err)
+	require.Equal(t, ErrNotInTransaction, err)
 
 	err = n1_1.Rollback()
 	require.NoError(t, err)
@@ -213,7 +212,7 @@ func TestSqalxFromTransaction(t *testing.T) {
 	tx, err := db.Beginx()
 	require.NoError(t, err)
 
-	node, err := sqalx.NewFromTransaction(tx)
+	node, err := NewFromTransaction(tx)
 	require.NoError(t, err)
 
 	_, err = node.Exec("UPDATE products SET views = views + 1")
